@@ -1,0 +1,24 @@
+:root {
+  --primary: #1A73E8;
+  --primary-dark: #1557B0;
+  --secondary: #34A853;
+  --accent: #FBBC04;
+  --error: #EA4335;
+  --surface: #FFFFFF;
+  --background: #F8F9FA;
+  --text-primary: #202124;
+  --text-secondary: #5F6368;
+  --border: #DADCE0;
+}
+body { font-family: 'Roboto', sans-serif; background: var(--background); color: var(--text-primary); }
+.navbar-brand { font-weight: 700; color: var(--primary) !important; font-size: 1.4rem; }
+.btn-primary { background: var(--primary); border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+.card { border: 1px solid var(--border); border-radius: 10px; }
+.badge-mc { background: #E8F0FE; color: var(--primary); }
+.badge-tf { background: #E6F4EA; color: #1E8E3E; }
+.badge-fr { background: #FEF9E7; color: #B06000; }
+.progress-bar { background: var(--primary); }
+.status-generating { color: var(--accent); }
+.status-ready { color: var(--secondary); }
+.status-failed { color: var(--error); }

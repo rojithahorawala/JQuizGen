@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Quiz Detail - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+
+    <div class="d-flex align-items-center mb-4 gap-3">
+        <a th:href="@{/teacher/dashboard}" class="btn btn-outline-secondary btn-sm">&larr; Back</a>
+        <h2 class="mb-0" th:text="${quiz.title()}"></h2>
+        <span class="ms-2 badge bg-primary" th:text="${quiz.questionCount() + ' questions'}"></span>
+    </div>
+
+    <div th:each="q, stat : ${quiz.questions()}" class="card mb-3">
+        <div class="card-header d-flex justify-content-between">
+            <span class="fw-semibold">
+                <span class="text-muted me-2" th:text="${stat.count + '.'}"></span>
+                <span th:text="${q.questionText()}"></span>
+            </span>
+            <span class="d-flex align-items-center gap-2">
+                <span th:switch="${q.questionType()}">
+                    <span th:case="'MULTIPLE_CHOICE'" class="badge bg-info text-dark">MC</span>
+                    <span th:case="'TRUE_FALSE'" class="badge bg-secondary">T/F</span>
+                    <span th:case="'FREE_RESPONSE'" class="badge bg-warning text-dark">FR</span>
+                    <span th:case="*" class="badge bg-light text-dark" th:text="${q.questionType()}"></span>
+                </span>
+                <span class="text-muted small" th:text="${q.points() + ' pts'}"></span>
+            </span>
+        </div>
+        <div class="card-body">
+            <!-- MC / TF options -->
+            <div th:if="${q.questionType() == 'MULTIPLE_CHOICE' or q.questionType() == 'TRUE_FALSE'}">
+                <ul class="list-group list-group-flush">
+                    <li th:each="opt : ${q.options()}"
+                        class="list-group-item"
+                        th:classappend="${opt.correct()} ? 'list-group-item-success' : ''">
+                        <span th:text="${opt.optionText()}"></span>
+                        <span th:if="${opt.correct()}" class="float-end text-success fw-semibold small">&#10003; Correct</span>
+                    </li>
+                </ul>
+            </div>
+            <!-- FR -->
+            <div th:if="${q.questionType() == 'FREE_RESPONSE'}">
+                <p class="text-muted mb-0 fst-italic">Free response — no fixed answer.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

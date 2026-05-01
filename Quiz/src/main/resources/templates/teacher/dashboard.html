@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Teacher Dashboard - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Teacher Dashboard</h1>
+        <a th:href="@{/teacher/upload}" class="btn btn-primary">+ Generate Quiz</a>
+    </div>
+
+    <div th:if="${info}" class="alert alert-info alert-dismissible fade show" role="alert">
+        <span th:text="${info}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="display-6 mb-2">📄</div>
+                    <h5 class="card-title">Upload &amp; Generate</h5>
+                    <p class="text-muted">Upload study materials to generate a new quiz using AI.</p>
+                    <a th:href="@{/teacher/upload}" class="btn btn-primary">Upload Files</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="display-6 mb-2">✏️</div>
+                    <h5 class="card-title">
+                        Grading Queue
+                        <span th:if="${pendingGradingCount > 0}"
+                              class="badge bg-danger ms-2"
+                              th:text="${pendingGradingCount}"></span>
+                    </h5>
+                    <p class="text-muted">Grade free-response questions from student submissions.</p>
+                    <a th:href="@{/teacher/grade}" class="btn btn-outline-primary">Go to Grading</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">My Quizzes</h5>
+        </div>
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(quizzes)}" class="p-4 text-center text-muted">
+                No quizzes yet. Upload study materials to generate your first quiz.
+            </div>
+            <table th:if="${!#lists.isEmpty(quizzes)}" class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Questions</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="quiz : ${quizzes}">
+                        <td th:text="${quiz.title()}"></td>
+                        <td>
+                            <span th:switch="${quiz.status()}">
+                                <span th:case="'GENERATING'" class="badge bg-warning text-dark">Generating</span>
+                                <span th:case="'READY'" class="badge bg-success">Ready</span>
+                                <span th:case="'ACTIVE'" class="badge bg-primary">Active</span>
+                                <span th:case="'COMPLETED'" class="badge bg-secondary">Completed</span>
+                                <span th:case="*" class="badge bg-light text-dark" th:text="${quiz.status()}"></span>
+                            </span>
+                        </td>
+                        <td th:text="${quiz.questionCount()}"></td>
+                        <td th:text="${#temporals.format(quiz.createdAt(), 'MMM d, yyyy')}"></td>
+                        <td class="d-flex gap-2">
+                            <a th:if="${quiz.status() != 'GENERATING'}"
+                               th:href="@{/teacher/quiz/{id}(id=${quiz.id()})}"
+                               class="btn btn-sm btn-outline-primary">View Quiz</a>
+                            <a th:href="@{/teacher/results/{id}(id=${quiz.id()})}" class="btn btn-sm btn-outline-secondary">Results</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

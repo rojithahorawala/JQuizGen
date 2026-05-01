@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Student Dashboard - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Student Dashboard</h1>
+        <a th:href="@{/student/upload}" class="btn btn-primary">+ Generate My Quiz</a>
+    </div>
+
+    <!-- Available Quizzes -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Available Quizzes</h5>
+        </div>
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(availableQuizzes)}" class="p-4 text-center text-muted">
+                No quizzes available yet.
+            </div>
+            <table th:if="${!#lists.isEmpty(availableQuizzes)}" class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Questions</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="quiz : ${availableQuizzes}">
+                        <td th:text="${quiz.title()}"></td>
+                        <td th:text="${quiz.questionCount()}"></td>
+                        <td>
+                            <a th:href="@{/quiz/take/{id}(id=${quiz.id()})}" class="btn btn-sm btn-primary">Start Quiz</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- My Quizzes -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">My Generated Quizzes</h5>
+        </div>
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(personalQuizzes)}" class="p-4 text-center text-muted">
+                No personal quizzes yet. Upload study materials to generate one.
+            </div>
+            <table th:if="${!#lists.isEmpty(personalQuizzes)}" class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Questions</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="quiz : ${personalQuizzes}">
+                        <td th:text="${quiz.title()}"></td>
+                        <td>
+                            <span th:switch="${quiz.status()}">
+                                <span th:case="'GENERATING'" class="badge bg-warning text-dark">Generating</span>
+                                <span th:case="'READY'" class="badge bg-success">Ready</span>
+                                <span th:case="*" class="badge bg-secondary" th:text="${quiz.status()}"></span>
+                            </span>
+                        </td>
+                        <td th:text="${quiz.questionCount()}"></td>
+                        <td>
+                            <a th:if="${quiz.status() == 'READY'}"
+                               th:href="@{/quiz/take/{id}(id=${quiz.id()})}"
+                               class="btn btn-sm btn-primary">Start Quiz</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">My History</h5>
+        </div>
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(history)}" class="p-4 text-center text-muted">
+                No quiz attempts yet.
+            </div>
+            <table th:if="${!#lists.isEmpty(history)}" class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Quiz</th>
+                        <th>Score</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="attempt : ${history}">
+                        <td th:text="${attempt.quizTitle()}"></td>
+                        <td>
+                            <span th:if="${attempt.score() != null}"
+                                  th:text="${attempt.score() + '%'}"></span>
+                            <span th:if="${attempt.score() == null}" class="text-muted">Pending</span>
+                        </td>
+                        <td>
+                            <span th:if="${attempt.submittedAt() != null}"
+                                  th:text="${#temporals.format(attempt.submittedAt(), 'MMM d, yyyy')}"></span>
+                            <span th:if="${attempt.submittedAt() == null}" class="text-muted">—</span>
+                        </td>
+                        <td>
+                            <span th:switch="${attempt.status()}">
+                                <span th:case="'GRADED'" class="badge bg-success">Graded</span>
+                                <span th:case="'SUBMITTED'" class="badge bg-warning text-dark">Submitted</span>
+                                <span th:case="'IN_PROGRESS'" class="badge bg-secondary">In Progress</span>
+                                <span th:case="*" class="badge bg-light text-dark" th:text="${attempt.status()}"></span>
+                            </span>
+                        </td>
+                        <td>
+                            <a th:if="${attempt.status() != 'IN_PROGRESS'}"
+                               th:href="@{/student/attempts/{id}(id=${attempt.id()})}"
+                               class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

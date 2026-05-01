@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Generating Quiz - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-7 text-center">
+            <div id="generatingSection">
+                <div class="spinner-border text-primary mb-4" style="width:3rem;height:3rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h2 class="mb-2">Generating Your Quiz...</h2>
+                <p class="text-muted mb-4">Our AI is analyzing your materials and crafting questions. This may take a moment.</p>
+                <div class="progress mb-4" style="height:8px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar"
+                         role="progressbar" style="width: 30%"></div>
+                </div>
+                <p class="text-muted small" id="statusText">Processing files...</p>
+            </div>
+
+            <div id="failedSection" class="d-none">
+                <div class="text-danger display-4 mb-3">✗</div>
+                <h2 class="text-danger mb-2">Generation Failed</h2>
+                <p class="text-muted mb-2">An error occurred while generating your quiz.</p>
+                <p class="badge bg-danger mb-4" id="errorCodeDisplay"></p>
+                <a href="javascript:history.back()" class="btn btn-primary">Try Again</a>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        const jobId = /*[[${jobId}]]*/ 0;
+        let progress = 30;
+        let pollInterval;
+
+        function pollStatus() {
+            fetch('/quiz/status/' + jobId)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'READY') {
+                        clearInterval(pollInterval);
+                        document.getElementById('progressBar').style.width = '100%';
+                        document.getElementById('statusText').textContent = 'Complete! Redirecting...';
+                        setTimeout(() => window.location = '/quiz/take/' + data.quizId, 500);
+                    } else if (data.status === 'FAILED') {
+                        clearInterval(pollInterval);
+                        document.getElementById('generatingSection').classList.add('d-none');
+                        document.getElementById('failedSection').classList.remove('d-none');
+                        document.getElementById('errorCodeDisplay').textContent = 'Error Code: ' + (data.errorCode || 'Unknown');
+                        document.getElementById('progressBar').classList.remove('progress-bar-animated');
+                        document.getElementById('progressBar').classList.add('bg-danger');
+                    } else if (data.status === 'PROCESSING') {
+                        progress = Math.min(90, progress + 5);
+                        document.getElementById('progressBar').style.width = progress + '%';
+                        document.getElementById('statusText').textContent = 'AI is generating questions...';
+                    }
+                })
+                .catch(() => {
+                    // Network error, keep polling
+                });
+        }
+
+        pollInterval = setInterval(pollStatus, 2000);
+        pollStatus();
+    </script>
+</div>
+</body>
+</html>

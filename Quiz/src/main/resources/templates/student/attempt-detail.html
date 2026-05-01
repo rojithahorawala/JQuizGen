@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Attempt Detail - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+
+    <div class="d-flex align-items-center mb-4 gap-3">
+        <a th:href="@{/student/dashboard}" class="btn btn-outline-secondary btn-sm">&larr; Back</a>
+        <h2 class="mb-0" th:text="${attempt.quizTitle()}"></h2>
+        <span th:if="${attempt.score() != null}"
+              class="ms-auto fs-4 fw-bold"
+              th:classappend="${attempt.score() >= 70} ? 'text-success' : 'text-warning'"
+              th:text="${attempt.score() + '%'}"></span>
+        <span th:if="${attempt.score() == null}" class="ms-auto badge bg-secondary fs-6">Pending</span>
+    </div>
+
+    <div class="text-muted small mb-4">
+        Submitted: <span th:if="${attempt.submittedAt() != null}"
+                         th:text="${#temporals.format(attempt.submittedAt(), 'MMM d, yyyy HH:mm')}"></span>
+        <span th:if="${attempt.submittedAt() == null}">—</span>
+    </div>
+
+    <div th:each="answer : ${attempt.answers()}" class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold" th:text="${answer.questionText()}"></span>
+            <span th:if="${answer.questionType() == 'MULTIPLE_CHOICE' or answer.questionType() == 'TRUE_FALSE'}">
+                <span th:if="${answer.correct()}" class="badge bg-success">Correct</span>
+                <span th:if="${!answer.correct()}" class="badge bg-danger">Incorrect</span>
+            </span>
+            <span th:if="${answer.questionType() == 'FREE_RESPONSE'}">
+                <span th:if="${answer.pointsAwarded() != null}" class="badge bg-success"
+                      th:text="'Graded: ' + ${answer.pointsAwarded()} + ' pts'"></span>
+                <span th:if="${answer.pointsAwarded() == null}" class="badge bg-secondary">Pending</span>
+            </span>
+        </div>
+        <div class="card-body">
+            <div th:if="${answer.questionType() == 'MULTIPLE_CHOICE' or answer.questionType() == 'TRUE_FALSE'}">
+                <ul class="list-group list-group-flush mb-2">
+                    <li th:each="opt : ${answer.options()}"
+                        class="list-group-item"
+                        th:classappend="${opt == answer.correctAnswer()} ? 'list-group-item-success' :
+                                        (${opt == answer.answerText() and opt != answer.correctAnswer()} ? 'list-group-item-danger' : '')">
+                        <span th:text="${opt}"></span>
+                        <span th:if="${opt == answer.correctAnswer()}" class="float-end text-success fw-semibold small">&#10003; Correct answer</span>
+                        <span th:if="${opt == answer.answerText() and opt != answer.correctAnswer()}" class="float-end text-danger small">Your answer</span>
+                    </li>
+                </ul>
+                <p class="mb-0 small text-muted">
+                    Your answer: <strong th:text="${answer.answerText() != null and answer.answerText() != '' ? answer.answerText() : '(none)'}"></strong>
+                </p>
+            </div>
+            <div th:if="${answer.questionType() == 'FREE_RESPONSE'}">
+                <p class="mb-1 text-muted small">Your answer:</p>
+                <p class="mb-0" th:text="${answer.answerText() != null and answer.answerText() != '' ? answer.answerText() : '(no answer)'}"></p>
+                <p th:if="${answer.pointsAwarded() == null}" class="text-muted small mt-2 mb-0">Awaiting teacher review.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

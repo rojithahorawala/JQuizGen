@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Error - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-7 text-center">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <div class="display-1 fw-bold text-muted mb-3" th:text="${status}">500</div>
+                    <span class="badge bg-danger mb-3" th:text="${errorCode}">ERR</span>
+                    <h3 class="mb-3" th:text="${errorMessage}">An unexpected error occurred.</h3>
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <a href="javascript:history.back()" class="btn btn-outline-secondary">Go Back</a>
+                        <a th:href="@{/}" class="btn btn-primary">Home</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

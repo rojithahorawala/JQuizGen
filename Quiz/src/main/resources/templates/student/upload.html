@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Upload - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h2 class="mb-4">Generate My Quiz</h2>
+            <div class="card">
+                <div class="card-body p-4">
+                    <form th:action="@{/student/upload}" method="post" enctype="multipart/form-data" id="uploadForm">
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Upload Study Materials</label>
+                            <div id="dropZone" class="border border-2 border-dashed rounded p-5 text-center"
+                                 style="border-style: dashed !important; background: #f8f9fa; cursor:pointer;"
+                                 onclick="document.getElementById('files').click()">
+                                <div class="mb-2" style="font-size:2rem;">📂</div>
+                                <p class="mb-1">Drag &amp; drop files here or <strong>click to browse</strong></p>
+                                <p class="text-muted small">Supports: PDF, DOCX, DOC, CSV, XLS, XLSX, TXT, MD (max 3 files, 10MB each)</p>
+                            </div>
+                            <input type="file" class="d-none" id="files" name="files" multiple
+                                   accept=".pdf,.docx,.doc,.csv,.xls,.xlsx,.txt,.md" max="3"/>
+                            <div id="fileList" class="mt-2"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="questionCount" class="form-label fw-semibold">
+                                Number of Questions: <span id="countDisplay" class="text-primary fw-bold">15</span>
+                            </label>
+                            <input type="range" class="form-range" id="questionCount" name="questionCount"
+                                   min="4" max="25" value="15"
+                                   oninput="document.getElementById('countDisplay').textContent = this.value"/>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>4</span><span>25</span>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                Generate Quiz
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('files');
+        const fileList = document.getElementById('fileList');
+        const dropZone = document.getElementById('dropZone');
+
+        fileInput.addEventListener('change', updateFileList);
+
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-primary'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-primary'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('border-primary');
+            fileInput.files = e.dataTransfer.files;
+            updateFileList();
+        });
+
+        function updateFileList() {
+            const files = Array.from(fileInput.files).slice(0, 3);
+            fileList.innerHTML = files.map(f =>
+                `<div class="badge bg-light text-dark border me-2 mt-2 p-2">📄 ${f.name}</div>`
+            ).join('');
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', function() {
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Uploading...';
+        });
+    </script>
+</div>
+</body>
+</html>

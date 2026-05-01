@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Take Quiz - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+    <div class="row justify-content-center">
+        <div class="col-md-9">
+            <h2 class="mb-1" th:text="${quiz.title()}"></h2>
+            <p class="text-muted mb-4">
+                <span th:text="${quiz.questionCount()}"></span> questions
+            </p>
+
+            <form th:action="@{/quiz/submit/{id}(id=${attempt.id()})}" method="post" id="quizForm">
+                <div th:each="question, qStat : ${quiz.questions()}" class="card mb-4"
+                     th:id="'question-' + ${qStat.index}">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>Question <span th:text="${qStat.count}"></span> of <span th:text="${quiz.questionCount()}"></span></span>
+                        <span class="badge" th:classappend="${question.questionType() == 'MULTIPLE_CHOICE'} ? 'badge-mc' : (${question.questionType() == 'TRUE_FALSE'} ? 'badge-tf' : 'badge-fr')"
+                              th:text="${question.questionType() == 'MULTIPLE_CHOICE'} ? 'Multiple Choice' : (${question.questionType() == 'TRUE_FALSE'} ? 'True/False' : 'Free Response')"></span>
+                    </div>
+                    <div class="card-body">
+                        <p class="fs-5 mb-3" th:text="${question.questionText()}"></p>
+
+                        <!-- Multiple Choice -->
+                        <div th:if="${question.questionType() == 'MULTIPLE_CHOICE'}">
+                            <div th:each="option, oStat : ${question.options()}" class="form-check mb-2">
+                                <input class="form-check-input" type="radio"
+                                       th:name="'q_' + ${question.id()}"
+                                       th:id="'q' + ${question.id()} + '_opt' + ${oStat.index}"
+                                       th:value="${oStat.index == 0 ? 'A' : (oStat.index == 1 ? 'B' : (oStat.index == 2 ? 'C' : 'D'))}"/>
+                                <label class="form-check-label"
+                                       th:for="'q' + ${question.id()} + '_opt' + ${oStat.index}">
+                                    <span th:text="${oStat.index == 0 ? 'A' : (oStat.index == 1 ? 'B' : (oStat.index == 2 ? 'C' : 'D'))}"></span>.
+                                    <span th:text="${option.optionText()}"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- True/False -->
+                        <div th:if="${question.questionType() == 'TRUE_FALSE'}">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio"
+                                       th:name="'q_' + ${question.id()}"
+                                       th:id="'q' + ${question.id()} + '_true'"
+                                       value="TRUE"/>
+                                <label class="form-check-label" th:for="'q' + ${question.id()} + '_true'">True</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio"
+                                       th:name="'q_' + ${question.id()}"
+                                       th:id="'q' + ${question.id()} + '_false'"
+                                       value="FALSE"/>
+                                <label class="form-check-label" th:for="'q' + ${question.id()} + '_false'">False</label>
+                            </div>
+                        </div>
+
+                        <!-- Free Response -->
+                        <div th:if="${question.questionType() == 'FREE_RESPONSE'}">
+                            <textarea class="form-control"
+                                      th:name="'q_' + ${question.id()}"
+                                      rows="4"
+                                      placeholder="Enter your answer here..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mb-4">
+                    <button type="button" class="btn btn-primary btn-lg"
+                            data-bs-toggle="modal" data-bs-target="#submitModal">
+                        Submit Quiz
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Submit Confirmation Modal -->
+    <div class="modal fade" id="submitModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Submit Quiz?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to submit your quiz? You cannot change answers after submission.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('quizForm').submit()">
+                        Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::content})}">
+<head><title>Grade - JQuizGen</title></head>
+<body>
+<div th:fragment="content">
+    <h2 class="mb-4">Grading Queue</h2>
+
+    <div th:if="${#lists.isEmpty(pendingAttempts)}" class="alert alert-success">
+        No pending free-response answers to grade.
+    </div>
+
+    <div th:each="attempt : ${pendingAttempts}" class="card mb-4">
+        <div class="card-header d-flex justify-content-between">
+            <span>
+                <strong th:text="${attempt.quizTitle()}"></strong>
+                <span class="ms-2 text-muted small">
+                    &mdash; <span th:text="${attempt.studentUsername()}"></span>
+                    (<span th:text="${attempt.studentEmail()}"></span>)
+                </span>
+            </span>
+            <span class="text-muted small">
+                Attempt #<span th:text="${attempt.id()}"></span>
+                &middot;
+                <span th:text="${#temporals.format(attempt.submittedAt(), 'MMM d, yyyy HH:mm')}"></span>
+            </span>
+        </div>
+        <div class="card-body">
+            <div th:each="answer : ${attempt.answers()}"
+                 th:if="${answer.pointsAwarded() == null}">
+                <div class="mb-3 p-3 border rounded">
+                    <p class="fw-semibold mb-1" th:text="${answer.questionText()}"></p>
+                    <p class="text-muted mb-2 fst-italic" th:text="${'Student answered: ' + (answer.answerText() != null and answer.answerText() != '' ? answer.answerText() : '(no answer)')}"></p>
+                    <form th:action="@{/teacher/grade/{aId}/question/{qId}(aId=${attempt.id()}, qId=${answer.questionId()})}"
+                          method="post" class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0">Points:</label>
+                        <input type="number" class="form-control form-control-sm" name="pointsAwarded"
+                               min="0" max="10" value="0" style="width:80px;" required/>
+                        <button type="submit" class="btn btn-sm btn-primary">Submit Grade</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
