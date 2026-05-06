@@ -72,6 +72,12 @@
                 <p class="mb-0 small text-muted">
                     Your answer: <strong th:text="${answer.answerText() != null and answer.answerText() != '' ? answer.answerText() : '(none)'}"></strong>
                 </p>
+                <!-- AI feedback for wrong answers -->
+                <div th:if="${answer.correct() != null and !answer.correct()}"
+                     class="mt-3 p-3 rounded border-start border-4 border-warning bg-warning bg-opacity-10">
+                    <div class="fw-semibold small text-warning-emphasis mb-1">AI Explanation</div>
+                    <span class="small" th:text="${answer.aiFeedback()}"></span>
+                </div>
             </div>
             <!-- Free response -->
             <div th:if="${answer.questionType() == 'FREE_RESPONSE'}">

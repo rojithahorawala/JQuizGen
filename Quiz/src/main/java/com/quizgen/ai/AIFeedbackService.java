@@ -7,7 +7,6 @@ import com.quizgen.quiz.QuestionOption;
 import com.quizgen.quiz.QuestionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +25,6 @@ public class AIFeedbackService {
         this.geminiClient = geminiClient;
     }
 
-    @Async
     @Transactional
     public void generateFeedbackForAttempt(Long attemptId) {
         List<Answer> answers = answerRepository.findByAttemptId(attemptId);
