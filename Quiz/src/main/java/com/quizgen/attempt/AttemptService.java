@@ -6,7 +6,6 @@ import com.quizgen.quiz.Question;
 import com.quizgen.quiz.QuestionRepository;
 import com.quizgen.quiz.Quiz;
 import com.quizgen.quiz.QuizRepository;
-import com.quizgen.quiz.QuizStatus;
 import com.quizgen.user.User;
 import com.quizgen.user.UserRepository;
 import org.slf4j.Logger;
@@ -151,7 +150,8 @@ public class AttemptService {
                             opts,
                             a.getAnswerText(),
                             a.isCorrect(),
-                            a.getPointsAwarded()
+                            a.getPointsAwarded(),
+                            a.getAiFeedback()
                     );
                 })
                 .collect(Collectors.toList());

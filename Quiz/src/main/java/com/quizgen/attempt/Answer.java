@@ -28,6 +28,9 @@ public class Answer {
     @Column(name = "points_awarded")
     private Integer pointsAwarded;
 
+    @Column(name = "ai_feedback", columnDefinition = "TEXT")
+    private String aiFeedback;
+
     public Answer() {}
 
     public Long getId() { return id; }
@@ -47,4 +50,7 @@ public class Answer {
 
     public Integer getPointsAwarded() { return pointsAwarded; }
     public void setPointsAwarded(Integer pointsAwarded) { this.pointsAwarded = pointsAwarded; }
+
+    public String getAiFeedback() { return aiFeedback; }
+    public void setAiFeedback(String aiFeedback) { this.aiFeedback = aiFeedback; }
 }

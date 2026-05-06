@@ -1,5 +1,6 @@
 package com.quizgen.quiz;
 
+import com.quizgen.ai.AIFeedbackService;
 import com.quizgen.ai.QuizGenerationService;
 import com.quizgen.attempt.AttemptService;
 import com.quizgen.common.AttemptDto;
@@ -29,15 +30,18 @@ public class QuizController {
     private final QuizService quizService;
     private final AttemptService attemptService;
     private final UserRepository userRepository;
+    private final AIFeedbackService aiFeedbackService;
 
     public QuizController(QuizGenerationService quizGenerationService,
                           QuizService quizService,
                           AttemptService attemptService,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          AIFeedbackService aiFeedbackService) {
         this.quizGenerationService = quizGenerationService;
         this.quizService = quizService;
         this.attemptService = attemptService;
         this.userRepository = userRepository;
+        this.aiFeedbackService = aiFeedbackService;
     }
 
     @GetMapping("/status/{jobId}")
@@ -82,6 +86,8 @@ public class QuizController {
                         com.quizgen.common.ErrorCodes.AUTH_001, "User not found"));
 
         attemptService.submitAttempt(attemptId, params, user.getId());
+        // Transaction committed — trigger async AI feedback for wrong MC/TF answers
+        aiFeedbackService.generateFeedbackForAttempt(attemptId);
         return "redirect:/quiz/complete/" + attemptId;
     }
 

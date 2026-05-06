@@ -1,5 +1,6 @@
 package com.quizgen.controller;
 
+import com.quizgen.ai.AIFeedbackService;
 import com.quizgen.ai.QuizGenerationService;
 import com.quizgen.attempt.AttemptService;
 import com.quizgen.auth.CustomUserDetailsService;
@@ -28,6 +29,7 @@ class QuizControllerTest {
     @Autowired
     MockMvc mockMvc;
 
+    @MockBean AIFeedbackService aiFeedbackService;
     @MockBean QuizGenerationService quizGenerationService;
     @MockBean QuizService quizService;
     @MockBean AttemptService attemptService;

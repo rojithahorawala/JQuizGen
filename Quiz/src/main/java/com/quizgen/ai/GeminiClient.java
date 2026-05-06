@@ -30,30 +30,34 @@ public class GeminiClient {
     }
 
     public String generateContent(String prompt) {
+        Map<String, Object> systemMessage = Map.of(
+                "type", "text",
+                "text", "You are an expert educational quiz generator. Respond with valid JSON only.",
+                "cache_control", Map.of("type", "ephemeral")
+        );
+        return callClaude(systemMessage, prompt, 8192);
+    }
+
+    public String generateText(String prompt) {
+        Map<String, Object> systemMessage = Map.of(
+                "type", "text",
+                "text", "You are a helpful educational assistant. Provide clear, concise explanations."
+        );
+        return callClaude(systemMessage, prompt, 300);
+    }
+
+    private String callClaude(Map<String, Object> systemMessage, String prompt, int maxTokens) {
         try {
-            Map<String, Object> systemMessage = Map.of(
-                    "type", "text",
-                    "text", "You are an expert educational quiz generator. Respond with valid JSON only.",
-                    "cache_control", Map.of("type", "ephemeral")
-            );
-
-            Map<String, Object> userMessage = Map.of(
-                    "role", "user",
-                    "content", prompt
-            );
-
             Map<String, Object> requestBody = Map.of(
                     "model", model,
-                    "max_tokens", 8192,
+                    "max_tokens", maxTokens,
                     "system", new Object[]{systemMessage},
-                    "messages", new Object[]{userMessage}
+                    "messages", new Object[]{Map.of("role", "user", "content", prompt)}
             );
-
-            String requestJson = objectMapper.writeValueAsString(requestBody);
 
             String responseJson = claudeWebClient.post()
                     .uri("/v1/messages")
-                    .bodyValue(requestJson)
+                    .bodyValue(objectMapper.writeValueAsString(requestBody))
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();

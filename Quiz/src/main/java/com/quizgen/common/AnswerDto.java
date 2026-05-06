@@ -11,5 +11,6 @@ public record AnswerDto(
     List<String> options,
     String answerText,
     Boolean correct,
-    Integer pointsAwarded
+    Integer pointsAwarded,
+    String aiFeedback
 ) {}
