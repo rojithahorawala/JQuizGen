@@ -37,6 +37,30 @@
                             </div>
                         </div>
 
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Question Types</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input qtype-check" type="checkbox"
+                                           name="questionTypes" value="MULTIPLE_CHOICE" id="typeMC" checked>
+                                    <label class="form-check-label" for="typeMC">Multiple Choice</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input qtype-check" type="checkbox"
+                                           name="questionTypes" value="TRUE_FALSE" id="typeTF" checked>
+                                    <label class="form-check-label" for="typeTF">True / False</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input qtype-check" type="checkbox"
+                                           name="questionTypes" value="FREE_RESPONSE" id="typeFR" checked>
+                                    <label class="form-check-label" for="typeFR">Free Response</label>
+                                </div>
+                            </div>
+                            <div id="typeError" class="text-danger small mt-1 d-none">
+                                Please select at least one question type.
+                            </div>
+                        </div>
+
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
                                 Generate Quiz
@@ -71,7 +95,14 @@
             ).join('');
         }
 
-        document.getElementById('uploadForm').addEventListener('submit', function() {
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            const checked = document.querySelectorAll('.qtype-check:checked');
+            if (checked.length === 0) {
+                e.preventDefault();
+                document.getElementById('typeError').classList.remove('d-none');
+                return;
+            }
+            document.getElementById('typeError').classList.add('d-none');
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('submitBtn').textContent = 'Uploading...';
         });

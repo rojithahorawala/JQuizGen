@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -79,14 +80,16 @@ public class AttemptService {
 
         List<Question> questions = questionRepository.findByQuizIdOrderByOrderIndexAsc(attempt.getQuiz().getId());
 
+        List<Answer> answersToSave = new ArrayList<>();
         for (Question question : questions) {
             String answerText = answers.getOrDefault("q_" + question.getId(), "");
             Answer answer = new Answer();
             answer.setAttempt(attempt);
             answer.setQuestion(question);
             answer.setAnswerText(answerText);
-            answerRepository.save(answer);
+            answersToSave.add(answer);
         }
+        answerRepository.saveAll(answersToSave);
 
         attempt.setStatus(AttemptStatus.SUBMITTED);
         attempt.setSubmittedAt(LocalDateTime.now());
@@ -111,7 +114,7 @@ public class AttemptService {
     @Transactional(readOnly = true)
     public List<AttemptDto> getStudentAttempts(Long studentId) {
         return attemptRepository.findByStudentIdOrderByStartedAtDesc(studentId).stream()
-                .map(this::toDto)
+                .map(this::toSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -119,7 +122,7 @@ public class AttemptService {
     @Transactional(readOnly = true)
     public List<AttemptDto> getAttemptsByQuiz(Long quizId) {
         return attemptRepository.findByQuizIdOrderByStartedAtDesc(quizId).stream()
-                .map(this::toDto)
+                .map(this::toSummaryDto)
                 .collect(Collectors.toList());
     }
 
@@ -129,6 +132,23 @@ public class AttemptService {
         return attemptRepository.findSubmittedAttempts().stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    private AttemptDto toSummaryDto(Attempt attempt) {
+        String studentUsername = attempt.getStudent() != null ? attempt.getStudent().getUsername() : "";
+        String studentEmail    = attempt.getStudent() != null ? attempt.getStudent().getEmail()    : "";
+        return new AttemptDto(
+                attempt.getId(),
+                attempt.getQuiz() != null ? attempt.getQuiz().getId() : null,
+                attempt.getQuiz() != null ? attempt.getQuiz().getTitle() : "",
+                attempt.getStartedAt(),
+                attempt.getSubmittedAt(),
+                attempt.getScore(),
+                attempt.getStatus().name(),
+                List.of(),
+                studentUsername,
+                studentEmail
+        );
     }
 
     private AttemptDto toDto(Attempt attempt) {

@@ -36,7 +36,8 @@ public class QuizGenerationServiceImpl implements QuizGenerationService {
 
     @Override
     @Transactional
-    public GenerationJobDto generateQuizAsync(List<MultipartFile> files, int questionCount, Long userId, String scope) {
+    public GenerationJobDto generateQuizAsync(List<MultipartFile> files, int questionCount, Long userId, String scope,
+                                              List<String> questionTypes) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCodes.QUIZ_001, "User not found: " + userId));
 
@@ -64,7 +65,7 @@ public class QuizGenerationServiceImpl implements QuizGenerationService {
 
         log.info("Created generation job {} for user {} with {} files", job.getId(), userId, fileContents.size());
 
-        asyncExecutor.processAsync(job.getId(), fileContents, fileNames, contentTypes, questionCount, userId, scope);
+        asyncExecutor.processAsync(job.getId(), fileContents, fileNames, contentTypes, questionCount, userId, scope, questionTypes);
 
         return new GenerationJobDto(job.getId());
     }

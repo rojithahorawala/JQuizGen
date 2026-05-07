@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -36,6 +37,7 @@ public class GradingService {
     public void gradeAutomatic(Long attemptId) {
         List<Answer> answers = answerRepository.findByAttemptId(attemptId);
 
+        List<Answer> modified = new ArrayList<>();
         for (Answer answer : answers) {
             Question question = answer.getQuestion();
             if (question == null) continue;
@@ -46,11 +48,14 @@ public class GradingService {
                 boolean isCorrect = correct != null && correct.equalsIgnoreCase(answer.getAnswerText().trim());
                 answer.setCorrect(isCorrect);
                 answer.setPointsAwarded(isCorrect ? question.getPoints() : 0);
-                answerRepository.save(answer);
+                modified.add(answer);
             }
         }
+        if (!modified.isEmpty()) {
+            answerRepository.saveAll(modified);
+        }
 
-        recalculateScore(attemptId);
+        doRecalculateScore(attemptId, answers);
         log.info("Auto-graded attempt {}", attemptId);
     }
 
@@ -71,10 +76,12 @@ public class GradingService {
 
     @Transactional
     protected void recalculateScore(Long attemptId) {
+        doRecalculateScore(attemptId, answerRepository.findByAttemptId(attemptId));
+    }
+
+    private void doRecalculateScore(Long attemptId, List<Answer> answers) {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCodes.GRADE_002, "Attempt not found: " + attemptId));
-
-        List<Answer> answers = answerRepository.findByAttemptId(attemptId);
 
         boolean hasPendingFreeResponse = answers.stream()
                 .anyMatch(a -> a.getQuestion() != null

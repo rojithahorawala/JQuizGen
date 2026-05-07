@@ -74,9 +74,10 @@ public class StudentController {
     @PostMapping("/upload")
     public String upload(@RequestParam("files") List<MultipartFile> files,
                          @RequestParam(value = "questionCount", defaultValue = "15") int questionCount,
+                         @RequestParam(value = "questionTypes", required = false) List<String> questionTypes,
                          @AuthenticationPrincipal UserDetails userDetails) {
         User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
-        GenerationJobDto job = quizGenerationService.generateQuizAsync(files, questionCount, user.getId(), "PERSONAL");
+        GenerationJobDto job = quizGenerationService.generateQuizAsync(files, questionCount, user.getId(), "PERSONAL", questionTypes);
         return "redirect:/quiz/generating/" + job.jobId();
     }
 }

@@ -10,11 +10,13 @@ import java.util.List;
 @Repository
 public interface AttemptRepository extends JpaRepository<Attempt, Long> {
 
-    List<Attempt> findByStudentIdOrderByStartedAtDesc(Long studentId);
+    @Query("SELECT a FROM Attempt a JOIN FETCH a.quiz JOIN FETCH a.student WHERE a.student.id = :studentId ORDER BY a.startedAt DESC")
+    List<Attempt> findByStudentIdOrderByStartedAtDesc(@Param("studentId") Long studentId);
 
-    List<Attempt> findByQuizIdOrderByStartedAtDesc(Long quizId);
+    @Query("SELECT a FROM Attempt a JOIN FETCH a.quiz JOIN FETCH a.student WHERE a.quiz.id = :quizId ORDER BY a.startedAt DESC")
+    List<Attempt> findByQuizIdOrderByStartedAtDesc(@Param("quizId") Long quizId);
 
-    @Query("SELECT a FROM Attempt a WHERE a.status = com.quizgen.attempt.AttemptStatus.SUBMITTED ORDER BY a.submittedAt ASC")
+    @Query("SELECT a FROM Attempt a JOIN FETCH a.quiz JOIN FETCH a.student WHERE a.status = com.quizgen.attempt.AttemptStatus.SUBMITTED ORDER BY a.submittedAt ASC")
     List<Attempt> findSubmittedAttempts();
 
     @Query("SELECT COUNT(a) FROM Attempt a WHERE a.student.id = :studentId AND a.quiz.id = :quizId")

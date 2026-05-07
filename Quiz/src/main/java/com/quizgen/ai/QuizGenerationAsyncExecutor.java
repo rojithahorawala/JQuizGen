@@ -52,7 +52,8 @@ public class QuizGenerationAsyncExecutor {
                              List<String> contentTypes,
                              int questionCount,
                              Long userId,
-                             String quizScope) {
+                             String quizScope,
+                             List<String> questionTypes) {
         GenerationJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
@@ -75,7 +76,7 @@ public class QuizGenerationAsyncExecutor {
             }
 
             // Build prompt and call Claude
-            String prompt = promptBuilder.buildQuizPrompt(combinedText.toString(), questionCount);
+            String prompt = promptBuilder.buildQuizPrompt(combinedText.toString(), questionCount, questionTypes);
             String aiResponse = geminiClient.generateContent(prompt);
 
             // Parse response

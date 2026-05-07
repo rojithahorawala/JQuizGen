@@ -3,6 +3,7 @@ package com.quizgen.attempt;
 import com.quizgen.quiz.Quiz;
 import com.quizgen.user.User;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ public class Attempt {
     private AttemptStatus status;
 
     @OneToMany(mappedBy = "attempt", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     private List<Answer> answers = new ArrayList<>();
 
     public Attempt() {}

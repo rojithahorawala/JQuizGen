@@ -1,11 +1,13 @@
 package com.quizgen.quiz;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "questions")
+@BatchSize(size = 50)
 public class Question {
 
     @Id
@@ -33,6 +35,7 @@ public class Question {
     private int orderIndex;
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 100)
     private List<QuestionOption> options = new ArrayList<>();
 
     public Question() {}

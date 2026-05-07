@@ -2,12 +2,14 @@ package com.quizgen.quiz;
 
 import com.quizgen.user.User;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "quizzes")
+@BatchSize(size = 25)
 public class Quiz {
 
     @Id
