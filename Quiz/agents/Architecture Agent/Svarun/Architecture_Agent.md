@@ -1,4 +1,4 @@
-# JQuizGen — Architecture Document · V1.1
+# JQuizGen — Architecture Document · V1.3
 **AI-Powered Quiz Generator — Web Application**
 
 | Field | Value |
@@ -10,7 +10,7 @@
 | AI | Anthropic Claude (claude-haiku-4-5-20251001) |
 | Standard | ISO/IEC 25010 |
 
-> **V1.1 Note:** This document reflects the actual built system as of May 6, 2026. Sections that diverge from the original V1.0 design are marked **[IMPLEMENTED DIFFERENTLY]**.
+> **V1.3 Note:** This document reflects the actual built system as of May 6, 2026. Sections that diverge from the original V1.0 design are marked **[IMPLEMENTED DIFFERENTLY]**. V1.2 added Section 12 (Naming Conventions). V1.3 adds V3 migration, question-type selection feature, and performance optimisation configuration.
 
 ---
 
@@ -257,7 +257,7 @@ PostgreSQL via Neon
 // Quiz generation
 interface QuizGenerationService {
     GenerationJobDto generateQuizAsync(List<MultipartFile> files, int questionCount,
-                                       Long userId, String quizScope);
+                                       Long userId, String quizScope, List<String> questionTypes);
     GenerationStatusDto getJobStatus(Long jobId);
 }
 
@@ -349,7 +349,7 @@ POST /quiz/submit/{attemptId}
 
 ## 9. Database Schema
 
-Managed by Flyway. Two migrations applied as of May 6, 2026.
+Managed by Flyway. Three migrations applied as of May 6, 2026.
 
 ### V1 — Initial Schema (`V1__init_schema.sql`)
 
@@ -363,11 +363,23 @@ answers          (id, attempt_id→attempts, question_id→questions, answer_tex
 generation_jobs  (id, user_id→users, quiz_id→quizzes, status, error_code, created_at, completed_at)
 ```
 
-### V2 — AI Feedback (`V2__add_ai_feedback.sql`) **[NEW]**
+### V2 — AI Feedback (`V2__add_ai_feedback.sql`)
 
 ```sql
 ALTER TABLE answers ADD COLUMN IF NOT EXISTS ai_feedback TEXT;
 ```
+
+### V3 — Unique Answer Constraint (`V3__unique_answer_per_attempt_question.sql`) **[NEW]**
+
+```sql
+DELETE FROM answers
+WHERE id NOT IN (
+    SELECT MAX(id) FROM answers GROUP BY attempt_id, question_id
+);
+ALTER TABLE answers ADD CONSTRAINT uk_answers_attempt_question UNIQUE (attempt_id, question_id);
+```
+
+Removes any duplicate `(attempt_id, question_id)` rows created during development and enforces uniqueness at the DB level, preventing a second submission of the same question from creating duplicate answer rows.
 
 ### Key Enums
 
@@ -464,6 +476,7 @@ Pattern: `V{N}__{description}.sql` — two underscores before the description.
 |------|---------|
 | `V1__init_schema.sql` | Initial full schema |
 | `V2__add_ai_feedback.sql` | AI feedback column on `answers` |
+| `V3__unique_answer_per_attempt_question.sql` | Remove duplicate answer rows; add UNIQUE constraint on `(attempt_id, question_id)` |
 
 ### URL Routes
 
@@ -525,7 +538,7 @@ Pattern: `DOMAIN-NNN` — uppercase domain, three-digit sequence number.
 | **FRONTEND** | Thymeleaf + Bootstrap 5 |
 | **SECURITY** | Spring Security (session-based, BCrypt, max 1 session) |
 | **ORM** | Spring Data JPA + Hibernate 6 |
-| **MIGRATIONS** | Flyway 9.22.3 (2 migrations applied) |
+| **MIGRATIONS** | Flyway 9.22.3 (3 migrations applied) |
 | **DATABASE** | PostgreSQL 17.8 via Neon (connection pooler) |
 | **FILE STORAGE** | None — in-memory processing only |
 | **FILE PARSING** | Apache Tika (PDF, DOCX, CSV, XLS/XLSX, TXT, MD) |
@@ -537,7 +550,8 @@ Pattern: `DOMAIN-NNN` — uppercase domain, three-digit sequence number.
 | **MAX FILES** | Configurable (10MB per file enforced by Spring multipart) |
 | **ERROR STRATEGY** | Predefined codes + `@ControllerAdvice` + per-answer AI catch |
 | **TEST SUITE** | 60 tests · 0 failures · JUnit 5 + Mockito + `@WebMvcTest` |
+| **PERFORMANCE** | Hibernate batch writes (batch_size=25), JOIN FETCH queries, HikariCP pool (max=10), `@BatchSize` on entity collections, Thymeleaf cache=true |
 
 ---
 
-*JQuizGen Architecture Document · v1.2 · Updated May 6, 2026 · Architecture Agent (Svarun)*
+*JQuizGen Architecture Document · v1.3 · Updated May 6, 2026 · Architecture Agent (Svarun)*

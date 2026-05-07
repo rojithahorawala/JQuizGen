@@ -1,10 +1,11 @@
-# JQuizGen — DevOps Document · V1.0
+# JQuizGen — DevOps Document · V1.1
 **AI-Powered Quiz Generator — Operational & Deployment Reference**
 
 | Field | Value |
 |-------|-------|
-| Date | May 5, 2026 |
-| Phase | Development → Pre-Deploy |
+| Original Date | May 5, 2026 |
+| Last Updated | May 6, 2026 |
+| Phase | Active Development |
 | Agent | Dev-Ops Agent (Chris) |
 | Tool | Claude Code (claude-sonnet-4-6) |
 
@@ -32,21 +33,27 @@
 
 ## Environment Variables
 
-The application will **not start** without these two variables set in the runtime environment. They must never be committed to source control.
+The application will **not start** without these four variables set in the runtime environment. They must never be committed to source control.
 
 | Variable | Used As | Where Referenced |
 |----------|---------|-----------------|
-| `DATABASE_URL` | PostgreSQL JDBC connection string | `application.properties` → `spring.datasource.url` |
+| `DB_URL` | JDBC connection string (no embedded credentials) | `application.properties` → `spring.datasource.url` |
+| `DB_USER` | Database username | `application.properties` → `spring.datasource.username` |
+| `DB_PASSWORD` | Database password | `application.properties` → `spring.datasource.password` |
 | `ANTHROPIC_API_KEY` | Claude API auth key | `application.properties` → `claude.api.key` → `GeminiConfig.java` |
 
 ### Setting Variables Locally
 
 ```bash
-export DATABASE_URL=jdbc:postgresql://<host>/<dbname>?user=<user>&password=<pass>&sslmode=require
+export DB_URL=jdbc:postgresql://<host>/<dbname>?sslmode=require
+export DB_USER=<username>
+export DB_PASSWORD=<password>
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-> **Note:** The property key is `claude.api.key` and the config class is named `GeminiConfig` — this is a naming artifact from early development when Gemini was the planned AI provider. The live implementation calls the Anthropic Claude API.
+> **Note 1:** Credentials are split into three separate variables (`DB_URL`, `DB_USER`, `DB_PASSWORD`) rather than a single `DATABASE_URL` because the PostgreSQL JDBC driver rejects embedded-credentials URL format (`user:pass@host`).
+
+> **Note 2:** The property key is `claude.api.key` and the config class is named `GeminiConfig` — this is a naming artifact from early development when Gemini was the planned AI provider. The live implementation calls the Anthropic Claude API.
 
 ### .gitignore Coverage
 
@@ -98,7 +105,7 @@ mvn spring-boot:run
 java -jar target/jquizgen-0.0.1-SNAPSHOT.jar
 ```
 
-Both require `DATABASE_URL` and `ANTHROPIC_API_KEY` to be exported in the environment first.
+Both require `DB_URL`, `DB_USER`, `DB_PASSWORD`, and `ANTHROPIC_API_KEY` to be exported in the environment first.
 
 ### Key Maven Plugin
 
@@ -131,9 +138,9 @@ Produces a self-contained executable JAR with embedded Tomcat — no external se
 | `main` | Production database |
 | `dev` | Development / testing — free Neon feature, isolated from prod |
 
-### Schema — V1 (current)
+### Schema — V3 (current)
 
-Managed by Flyway. Migration file: `src/main/resources/db/migration/V1__init_schema.sql`
+Managed by Flyway. Three migrations applied.
 
 **Tables:**
 
@@ -144,8 +151,16 @@ Managed by Flyway. Migration file: `src/main/resources/db/migration/V1__init_sch
 | `questions` | Individual questions — type, correct answer key, points, order |
 | `question_options` | Multiple-choice options linked to questions |
 | `attempts` | Student quiz attempts — start/submit timestamps, score, status |
-| `answers` | Per-question student answers within an attempt — grading fields included |
+| `answers` | Per-question student answers — grading fields, `ai_feedback` (V2), UNIQUE `(attempt_id, question_id)` constraint (V3) |
 | `generation_jobs` | Async AI generation tracking — job status, error codes, timestamps |
+
+**Applied migrations:**
+
+| File | Purpose |
+|------|---------|
+| `V1__init_schema.sql` | Initial full schema (7 tables) |
+| `V2__add_ai_feedback.sql` | `ai_feedback TEXT` column on `answers` |
+| `V3__unique_answer_per_attempt_question.sql` | Deduplicates answer rows; adds `UNIQUE(attempt_id, question_id)` constraint |
 
 ### Flyway Configuration
 
@@ -271,10 +286,26 @@ logging.level.org.flywaydb=INFO
 
 ```properties
 # Database
-spring.datasource.url=${DATABASE_URL}
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USER}
+spring.datasource.password=${DB_PASSWORD}
 spring.datasource.driver-class-name=org.postgresql.Driver
 spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# Hibernate batch writes
+spring.jpa.properties.hibernate.jdbc.batch_size=25
+spring.jpa.properties.hibernate.order_inserts=true
+spring.jpa.properties.hibernate.order_updates=true
+spring.jpa.properties.hibernate.batch_versioned_data=true
+
+# HikariCP connection pool
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=3
+spring.datasource.hikari.connection-timeout=20000
+spring.datasource.hikari.idle-timeout=300000
+spring.datasource.hikari.max-lifetime=600000
 
 # Flyway
 spring.flyway.enabled=true
@@ -306,7 +337,7 @@ logging.level.org.springframework.security=WARN
 logging.level.org.flywaydb=INFO
 
 # Thymeleaf
-spring.thymeleaf.cache=false
+spring.thymeleaf.cache=true
 spring.thymeleaf.encoding=UTF-8
 ```
 
@@ -386,18 +417,44 @@ Each increment below reflects a stage of development completed with the Claude C
 - `Architecture_Agent.md` populated from architecture PDF (v1.0)
 - `Dev-Ops_Agent.md` generated from codebase state (this document)
 
+### Increment 11 — Performance Optimisations
+- `spring.thymeleaf.cache=true` enabled (was `false`)
+- Hibernate batch INSERTs/UPDATEs: `jdbc.batch_size=25`, `order_inserts=true`, `order_updates=true`
+- HikariCP pool tuned: `maximum-pool-size=10`, `minimum-idle=3`, `connection-timeout=20000`
+- `@BatchSize` added to `User`, `Quiz`, `Question` classes and `answers`/`options` collections to prevent N+1 queries
+- `AttemptRepository` list queries replaced with explicit `JOIN FETCH` JPQL to load `quiz` and `student` eagerly
+- `AttemptService.toSummaryDto()` introduced — list views (dashboard, results) skip loading answers; only the grading page loads full answer data via `toDto()`
+- `answerRepository.saveAll()` used for batch answer INSERT on quiz submit
+- `GradingService.gradeAutomatic()` uses `saveAll()` for batch UPDATE and avoids re-fetching already-loaded answer list
+
+### Increment 12 — Question Type Selection
+- Upload forms (student and teacher) now show checkboxes for `MULTIPLE_CHOICE`, `TRUE_FALSE`, `FREE_RESPONSE`
+- JS validation prevents submission if no type selected
+- `QuizGenerationService.generateQuizAsync()` accepts `List<String> questionTypes`
+- `PromptBuilder.buildQuizPrompt()` dynamically adjusts question distribution and JSON examples based on selected types
+- Distribution: single type = 100%; two types = ceiling/floor split; all three = 40/30/30 (MC/TF/FR)
+
+### Increment 13 — Grading Bug Fixes
+- `AnswerRepository.findFirstByAttemptIdAndQuestionId` replaces `findByAttemptIdAndQuestionId` — handles non-unique rows gracefully without throwing `IncorrectResultSizeDataAccessException`
+- `V3__unique_answer_per_attempt_question.sql` migration: deduplicates existing rows, enforces DB-level uniqueness
+- `AnswerDto` gains `maxPoints` field (11th record component) to drive slider max value
+- Grading page slider: replaced `<input type="number">` with `<input type="range">` showing live point value
+- Fixed Thymeleaf `th:attr` parsing failure: `oninput` with embedded `&quot;` entities replaced by `data-target` attribute + static JS handler
+- `GradingService.doRecalculateScore()` private method introduced to avoid redundant DB fetch in `gradeAutomatic()`
+
 ---
 
 ## Outstanding Items
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Run the application | Blocked | `DATABASE_URL` and `ANTHROPIC_API_KEY` not set in local environment |
-| Flyway checksum mismatch | Mitigated | `validate-on-migrate=false` prevents startup failure; do not edit applied migrations |
+| Run the application | **Complete** | Server running on port 8080; credentials passed as `DB_URL`, `DB_USER`, `DB_PASSWORD`, `ANTHROPIC_API_KEY` |
+| Flyway checksum mismatch | Mitigated | `validate-on-migrate=false` prevents startup failure; do not edit already-applied migrations |
+| V3 migration (unique constraint) | **Applied** | Duplicate answer rows removed; `UNIQUE(attempt_id, question_id)` enforced in DB |
+| Testing suite | **Complete** | 60 tests · 0 failures — see Testing Creation Agent (Juliann) |
+| `spring.thymeleaf.cache` | **Done** | Set to `true` for performance |
 | CI/CD pipeline | Not started | No GitHub Actions or equivalent configured yet |
 | Production deployment | Not started | No hosting target defined yet |
-| Testing suite | In progress | Testing Creation Agent (Juliann) — targeted for today |
-| `spring.thymeleaf.cache=false` | Dev-only | Must be set to `true` in production for performance |
 
 ---
 
@@ -416,4 +473,4 @@ Secrets (`DATABASE_URL`, `ANTHROPIC_API_KEY`) should be stored in the CI/CD plat
 
 ---
 
-*JQuizGen DevOps Document · v1.0 · Generated May 5, 2026 · Dev-Ops Agent (Chris)*
+*JQuizGen DevOps Document · v1.1 · Updated May 6, 2026 · Dev-Ops Agent (Chris)*

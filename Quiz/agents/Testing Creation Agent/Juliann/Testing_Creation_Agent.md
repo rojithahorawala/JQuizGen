@@ -1,9 +1,10 @@
-# JQuizGen — Testing Document · V1.0
+# JQuizGen — Testing Document · V1.1
 **AI-Powered Quiz Generator — Test Suite Reference**
 
 | Field | Value |
 |-------|-------|
-| Date | May 5, 2026 |
+| Original Date | May 5, 2026 |
+| Last Updated | May 6, 2026 |
 | Phase | Active Development |
 | Agent | Testing Creation Agent (Juliann) |
 | Tool | Claude Code (claude-sonnet-4-6) |
@@ -148,7 +149,7 @@ src/test/java/com/quizgen/
 
 ### GradingServiceTest (`com.quizgen.grading`)
 
-**Strategy:** Mockito unit test. `AttemptRepository` and `AnswerRepository` are mocked. Answer objects are real instances so state mutations (setCorrect, setPointsAwarded) are visible across both `findByAttemptId` calls within the same test.
+**Strategy:** Mockito unit test. `AttemptRepository` and `AnswerRepository` are mocked. Answer objects are real instances so state mutations (setCorrect, setPointsAwarded) are visible across both `findByAttemptId` calls within the same test. Manual grade tests mock `findFirstByAttemptIdAndQuestionId` (not the plain derived-query form) — this matches the renamed repository method that handles non-unique rows gracefully.
 
 | Test | What It Verifies |
 |------|-----------------|
@@ -263,10 +264,12 @@ src/test/java/com/quizgen/
 |-----|--------|--------------------|
 | Security access rules (forbidden, redirect-to-login) | `GlobalExceptionHandler` re-throw causes 500 in MockMvc context | `@SpringBootTest` + `MockMvc` with full context |
 | `QuizGenerationAsyncExecutor` (full pipeline) | Requires mocking Claude API + Tika in async context | `@SpringBootTest` with Mockito `@SpyBean` |
+| Question type selection (`PromptBuilder` distribution) | Covered for all-3 case; single-type and two-type paths not yet tested | Add `PromptBuilderTest` cases for 1-type and 2-type inputs |
 | Flyway migration integrity | Disabled in test properties | Run `mvn flyway:validate` against a test Neon branch |
 | `CustomUserDetailsService` lockout logic | Requires `LocalDateTime` manipulation | Unit test with mocked `UserRepository` |
 | `AttemptService.submitAttempt` | Complex interaction with `GradingService` | Integration test or deep Mockito stubbing |
 | `ResponseParser` with real Claude output | Tests use hand-crafted JSON | Add snapshot test from actual Claude response |
+| Grading slider (teacher UI) | Frontend-only behaviour | Playwright or Selenium end-to-end test |
 
 ### Security Integration Test (Recommended Next)
 
@@ -300,4 +303,4 @@ mvn test -Dtest="PromptBuilderTest,ResponseParserTest,AuthServiceTest,GradingSer
 
 ---
 
-*JQuizGen Testing Document · v1.0 · Generated May 5, 2026 · Testing Creation Agent (Juliann)*
+*JQuizGen Testing Document · v1.1 · Updated May 6, 2026 · Testing Creation Agent (Juliann)*

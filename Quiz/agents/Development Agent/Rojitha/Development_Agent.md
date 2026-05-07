@@ -1,9 +1,10 @@
-# JQuizGen — Development Document · V1.0
+# JQuizGen — Development Document · V1.1
 **AI-Powered Quiz Generator — Implementation Reference**
 
 | Field | Value |
 |-------|-------|
-| Date | May 5, 2026 |
+| Original Date | May 5, 2026 |
+| Last Updated | May 6, 2026 |
 | Phase | Active Development |
 | Agent | Development Agent (Rojitha) |
 | Tool | Claude Code (claude-sonnet-4-6) |
@@ -38,7 +39,8 @@ com.quizgen
 │   ├── GenerationJob.java            # @Entity — generation_jobs table
 │   ├── GenerationJobRepository.java
 │   ├── JobStatus.java                # PENDING, PROCESSING, READY, FAILED
-│   ├── QuizGenerationService.java    # Interface
+│   ├── AIFeedbackService.java        # Synchronous Claude feedback for wrong MC/TF answers
+│   ├── QuizGenerationService.java    # Interface (accepts questionTypes list)
 │   ├── QuizGenerationServiceImpl.java# Reads files, creates job, fires async executor
 │   └── QuizGenerationAsyncExecutor.java # @Async — extract → prompt → call AI → save quiz
 ├── quiz/
@@ -224,12 +226,14 @@ On any exception, `job.status = FAILED` and `job.errorCode` is set based on the 
 
 ### 3. Prompt Engineering
 
-**`PromptBuilder`** — question count is clamped to 4–25. Distribution is calculated as:
-- Multiple Choice: 40% of total
-- True/False: 30% of total
-- Free Response: remainder
+**`PromptBuilder`** — question count is clamped to 4–25. Distribution is calculated dynamically based on which types are selected:
+- All 3 types: MC 40%, TF 30%, FR remainder
+- 2 types: ceiling/floor split; MC gets the extra question when present
+- 1 type: 100% of that type
 
-The prompt explicitly instructs Claude to return only valid JSON (no markdown), ignore instructions embedded in uploaded content (prompt injection mitigation), and use the exact schema required by `ResponseParser`.
+The user selects which types to generate via checkboxes on the upload form (all three selected by default). A `List<String> questionTypes` parameter flows through `QuizGenerationService → QuizGenerationAsyncExecutor → PromptBuilder`. JS validation on the form prevents submission with no types selected.
+
+The prompt explicitly instructs Claude to return only valid JSON (no markdown), ignore instructions embedded in uploaded content (prompt injection mitigation), and use the exact schema required by `ResponseParser`. JSON examples in the prompt use `String.join(",\n", ...)` to avoid trailing commas when only a subset of types is requested.
 
 **`ResponseParser`** — handles the case where Claude wraps its response in markdown code fences (` ```json ... ``` `) by stripping them before parsing. This is a real-world robustness fix — models sometimes add fences even when told not to.
 
@@ -259,9 +263,25 @@ The class is named `GeminiClient` and the config class is `GeminiConfig`, but th
 
 **Manual grading** — `submitManualGrade()` is `@PreAuthorize("hasRole('TEACHER')")`. Takes `pointsAwarded`; sets `isCorrect = (pointsAwarded > 0)`. Then recalculates the overall score.
 
+**`findFirstByAttemptIdAndQuestionId`** — the repository method for locating an answer by attempt+question uses `findFirst` rather than the plain derived-query form. This prevents `IncorrectResultSizeDataAccessException` if duplicate rows existed before the V3 UNIQUE constraint was applied. The V3 migration deduplicates historical rows and the constraint prevents new duplicates.
+
+**Score recalculation** — `doRecalculateScore(Long attemptId, List<Answer> answers)` accepts an already-loaded answer list to avoid a redundant DB fetch when called from `gradeAutomatic()`. The `recalculateScore(Long)` protected method re-fetches answers from DB and delegates to `doRecalculateScore`, used by `submitManualGrade`.
+
+**Grading UI** — the teacher grading page uses `<input type="range">` (slider) instead of a number input. The slider's `data-target` attribute stores the ID of the live-value `<span>`, and the `oninput` handler reads `this.dataset.target` to update it. This avoids embedding quoted strings inside Thymeleaf `th:attr` expressions, which caused a `TemplateProcessingException`.
+
 ---
 
-### 7. QuizService — Data Access Patterns
+### 7. Performance — N+1 Prevention & Batch Writes
+
+**`@BatchSize`** annotations on entity classes and collections tell Hibernate to load lazy proxies in batches instead of one-by-one. Applied to `User` (25), `Quiz` (25), `Question` (50), and the `answers` (50) and `options` (100) collections.
+
+**JOIN FETCH queries** in `AttemptRepository` — all three list queries use explicit JPQL with `JOIN FETCH a.quiz JOIN FETCH a.student` so that quiz and student data is loaded in a single SQL join, not via separate proxy loads.
+
+**`toSummaryDto()` vs `toDto()`** — list views (student dashboard, teacher results) call `toSummaryDto()` which returns an empty `List.of()` for answers, avoiding loading answer data that those views don't display. The grading queue uses `toDto()` which loads full answer data.
+
+**Batch writes** — `submitAttempt()` uses `answerRepository.saveAll()` for one batch INSERT per quiz submission. `gradeAutomatic()` collects all modified answers then calls `saveAll()` for one batch UPDATE.
+
+### 8. QuizService — Data Access Patterns
 
 `QuizService` uses `@PreAuthorize` at the method level rather than only at the controller level, providing a second layer of enforcement:
 
@@ -276,13 +296,13 @@ Entity → DTO mapping is done inside the service — controllers never see `@En
 
 ---
 
-### 8. AttemptService — Circular Dependency Resolution
+### 9. AttemptService — Circular Dependency Resolution
 
 `AttemptService` depends on `GradingService`, and `GradingService` uses `AttemptRepository`. This creates a potential circular bean dependency. Resolved by annotating the `GradingService` constructor parameter in `AttemptService` with `@Lazy` — Spring creates a proxy and injects it lazily on first use.
 
 ---
 
-### 9. Error Handling
+### 10. Error Handling
 
 **`GlobalExceptionHandler`** — `@ControllerAdvice` catches all `AppException` subclasses and returns the `error/error.html` Thymeleaf view with `status`, `errorCode`, and `errorMessage` model attributes.
 
@@ -303,6 +323,13 @@ Entity → DTO mapping is done inside the service — controllers never see `@En
 | `InMemoryMultipartFile` | Custom `MultipartFile` | Allows passing file content across thread boundary without filesystem writes |
 | `@OrderBy("orderIndex ASC")` on `Quiz.questions` | JPA annotation | Ensures questions are always returned in authored order without explicit sorting in service layer |
 | `BigDecimal` with `HALF_UP` for scores | `recalculateScore()` | Avoids floating-point rounding errors on percentage calculations |
+| `@BatchSize` on entities and collections | Hibernate annotation | Batches lazy proxy loads so N attempts → 1 batch query, not N queries |
+| `JOIN FETCH` on all `AttemptRepository` list queries | JPQL | Eliminates separate proxy loads for `quiz` and `student` on every attempt in a list |
+| `toSummaryDto()` skips answer loading | `AttemptService` | Dashboard/results list views don't display answers; skipping them avoids loading hundreds of rows |
+| `findFirstByAttemptIdAndQuestionId` | `AnswerRepository` | Returns first match safely; plain `findBy...` throws if duplicate rows exist (pre-V3 data) |
+| `data-target` attribute on grade slider | `teacher/grade.html` | Stores dynamic element ID in a plain `data-*` attribute; avoids embedding quotes inside `th:attr` Thymeleaf expressions which causes `TemplateProcessingException` |
+| `String.join(",\n", exampleLines)` in `PromptBuilder` | Prompt construction | Prevents trailing commas in JSON examples when only a subset of question types is selected |
+| Split DB credentials (`DB_URL`, `DB_USER`, `DB_PASSWORD`) | `application.properties` | PostgreSQL JDBC driver rejects embedded-credential URL format (`user:pass@host`) |
 
 ---
 
@@ -340,17 +367,19 @@ All views use Thymeleaf with a shared `layout.html` fragment.
 | File upload + Tika extraction | Complete |
 | Claude API integration + prompt caching | Complete |
 | Async generation with job polling | Complete |
+| Question type selection (MC / TF / FR checkboxes) | **Complete** |
 | Quiz persistence (MC, TF, FR) | Complete |
 | Auto-grading (MC, TF) | Complete |
-| Manual grading (FR) | Complete |
+| Manual grading (FR) with slider UI | **Complete** |
 | Score calculation | Complete |
 | Student dashboard | Complete |
 | Teacher dashboard | Complete |
 | Error handling + error page | Complete |
 | Logging (3 appenders) | Complete |
-| Database running | Blocked — `DATABASE_URL` not set in local environment |
-| Application startup | Blocked — requires `DATABASE_URL` + `ANTHROPIC_API_KEY` |
-| Tests | In progress — Testing Agent (Juliann) |
+| Performance optimisations (batch, pool, cache) | **Complete** |
+| Database running | **Complete** — credentials passed as `DB_URL`, `DB_USER`, `DB_PASSWORD` |
+| Application startup | **Complete** — server running on port 8080 |
+| Tests | **Complete** — 60 tests · 0 failures |
 
 ---
 
@@ -364,4 +393,4 @@ All views use Thymeleaf with a shared `layout.html` fragment.
 
 ---
 
-*JQuizGen Development Document · v1.0 · Generated May 5, 2026 · Development Agent (Rojitha)*
+*JQuizGen Development Document · v1.1 · Updated May 6, 2026 · Development Agent (Rojitha)*
