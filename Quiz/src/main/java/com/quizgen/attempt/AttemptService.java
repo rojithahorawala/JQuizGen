@@ -171,7 +171,8 @@ public class AttemptService {
                             a.getAnswerText(),
                             a.isCorrect(),
                             a.getPointsAwarded(),
-                            a.getAiFeedback()
+                            a.getAiFeedback(),
+                            q != null ? q.getPoints() : 0
                     );
                 })
                 .collect(Collectors.toList());

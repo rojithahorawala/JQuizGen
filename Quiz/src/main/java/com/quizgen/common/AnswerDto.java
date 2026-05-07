@@ -12,5 +12,6 @@ public record AnswerDto(
     String answerText,
     Boolean correct,
     Integer pointsAwarded,
-    String aiFeedback
+    String aiFeedback,
+    int maxPoints
 ) {}

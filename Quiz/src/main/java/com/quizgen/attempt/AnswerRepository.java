@@ -13,7 +13,7 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
 
     List<Answer> findByAttemptId(Long attemptId);
 
-    Optional<Answer> findByAttemptIdAndQuestionId(Long attemptId, Long questionId);
+    Optional<Answer> findFirstByAttemptIdAndQuestionId(Long attemptId, Long questionId);
 
     @Query("SELECT a FROM Answer a WHERE a.attempt.id = :attemptId AND a.question.questionType = com.quizgen.quiz.QuestionType.FREE_RESPONSE AND a.pointsAwarded IS NULL")
     List<Answer> findUngradedFreeResponseByAttemptId(@Param("attemptId") Long attemptId);

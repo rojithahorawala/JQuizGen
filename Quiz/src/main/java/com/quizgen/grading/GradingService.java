@@ -62,7 +62,7 @@ public class GradingService {
     @PreAuthorize("hasRole('TEACHER')")
     @Transactional
     public void submitManualGrade(Long attemptId, Long questionId, int pointsAwarded) {
-        Answer answer = answerRepository.findByAttemptIdAndQuestionId(attemptId, questionId)
+        Answer answer = answerRepository.findFirstByAttemptIdAndQuestionId(attemptId, questionId)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCodes.GRADE_001,
                         "Answer not found for attempt " + attemptId + " question " + questionId));
 

@@ -33,10 +33,17 @@
                     <p class="fw-semibold mb-1" th:text="${answer.questionText()}"></p>
                     <p class="text-muted mb-2 fst-italic" th:text="${'Student answered: ' + (answer.answerText() != null and answer.answerText() != '' ? answer.answerText() : '(no answer)')}"></p>
                     <form th:action="@{/teacher/grade/{aId}/question/{qId}(aId=${attempt.id()}, qId=${answer.questionId()})}"
-                          method="post" class="d-flex align-items-center gap-2">
-                        <label class="form-label mb-0">Points:</label>
-                        <input type="number" class="form-control form-control-sm" name="pointsAwarded"
-                               min="0" max="10" value="0" style="width:80px;" required/>
+                          method="post" class="d-flex align-items-center gap-2 flex-wrap mt-2">
+                        <span class="text-muted small">0</span>
+                        <input type="range" class="form-range" name="pointsAwarded"
+                               min="0" th:max="${answer.maxPoints()}" value="0"
+                               style="width:140px;"
+                               th:attr="data-target=${'pts-' + attempt.id() + '-' + answer.questionId()}"
+                               oninput="document.getElementById(this.dataset.target).textContent=this.value"/>
+                        <span class="text-muted small" th:text="${answer.maxPoints()}"></span>
+                        <span class="fw-bold"
+                              th:id="${'pts-' + attempt.id() + '-' + answer.questionId()}">0</span>
+                        <span class="text-muted small">/ <span th:text="${answer.maxPoints()}"></span> pts</span>
                         <button type="submit" class="btn btn-sm btn-primary">Submit Grade</button>
                     </form>
                 </div>

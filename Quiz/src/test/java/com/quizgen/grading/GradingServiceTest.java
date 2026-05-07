@@ -147,7 +147,7 @@ class GradingServiceTest {
     void manualGradeSetsPointsAndIsCorrectTrue() {
         Answer frAnswer = makeAnswer(frQuestion, "Good answer");
         frAnswer.setId(99L);
-        when(answerRepository.findByAttemptIdAndQuestionId(10L, 3L)).thenReturn(Optional.of(frAnswer));
+        when(answerRepository.findFirstByAttemptIdAndQuestionId(10L, 3L)).thenReturn(Optional.of(frAnswer));
         when(answerRepository.findByAttemptId(10L)).thenReturn(List.of(frAnswer));
         when(attemptRepository.findById(10L)).thenReturn(Optional.of(attempt));
 
@@ -161,7 +161,7 @@ class GradingServiceTest {
     void manualGradeOfZeroSetsIsCorrectFalse() {
         Answer frAnswer = makeAnswer(frQuestion, "Wrong answer");
         frAnswer.setId(99L);
-        when(answerRepository.findByAttemptIdAndQuestionId(10L, 3L)).thenReturn(Optional.of(frAnswer));
+        when(answerRepository.findFirstByAttemptIdAndQuestionId(10L, 3L)).thenReturn(Optional.of(frAnswer));
         when(answerRepository.findByAttemptId(10L)).thenReturn(List.of(frAnswer));
         when(attemptRepository.findById(10L)).thenReturn(Optional.of(attempt));
 
